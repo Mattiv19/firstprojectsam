@@ -3,7 +3,7 @@ In this project Matthias and Sam are exploring api calls and how to display that
 
 
 
-
+# Old Project setup (to delete???)
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
