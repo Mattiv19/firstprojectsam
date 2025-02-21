@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { createClient } from "@supabase/supabase-js"
 import { MoreHorizontal } from "lucide-react"
 import { useState, useEffect } from 'react';
 
@@ -64,9 +65,14 @@ const coinIdMap: { [key: string]: string } = {
   "USDT": "tether"
 };
 
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL as string, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string);
+
+
 export function VaultTable() {
   const [vaults, setVaults] = useState<Vault[]>(initialVaults);
   const [priceError, setPriceError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
 
   const fetchPrices = async () => {
     // Get all coin IDs for the fetch
@@ -81,20 +87,25 @@ export function VaultTable() {
         })
       );
 
-      setVaults(currentVaults =>
-        currentVaults.map(vault => {
-          const coinId = coinIdMap[vault.name];
-          const result = responses.find(r => r.status === 'fulfilled' && r.value.coinId === coinId);
+      const updatedVaults = vaults.map(vault => {
+        const coinId = coinIdMap[vault.name];
+        const result = responses.find(r => r.status === 'fulfilled' && r.value.coinId === coinId);
 
-          if (result && result.status === 'fulfilled') {
-            return {
-              ...vault,
-              price: `$${result.value.data[coinId].usd.toLocaleString()}`
-            };
-          }
-          return vault;
-        })
-      );
+        if (result && result.status === 'fulfilled') {
+          const priceUsd = result.value.data[coinId].usd;
+          //save to db
+          savePriceToDatabase(vault.name, priceUsd);
+
+          return {
+            ...vault,
+            price: `$${priceUsd.toLocaleString()}`
+          };
+        }
+        return vault;
+      });
+
+      setVaults(updatedVaults);
+
       const failed = responses.filter(r => r.status === 'rejected');
       if (failed.length > 0) {
         setPriceError(`Failed to fetch prices for ${failed.length} coin(s)`);
@@ -113,9 +124,32 @@ export function VaultTable() {
   useEffect(() => {
     fetchPrices();
     // Optional: Set up an interval to refresh prices periodically
-    const interval = setInterval(fetchPrices, 60000); // Refresh every minute
+    const interval = setInterval(fetchPrices, 180000); // Refresh every 3 minutes
     return () => clearInterval(interval);
   }, []);
+
+  // Save price data to db
+  const savePriceToDatabase = async (coinName: string, priceUsd: number) => {
+    setSaveStatus('Saving...');
+
+    const { data, error } = await supabase
+      .from('price_history')
+      .insert([
+        {
+          coin_name: coinName,
+          price_usd: priceUsd
+        }
+      ])
+    if (error) {
+      console.error('Error saving to database', error);
+      setSaveStatus(`Error saving to database: ${error.message}`);
+      return false;
+    }
+
+    setSaveStatus('Saved successfully');
+    setTimeout(() => setSaveStatus(null), 3000);
+    return true;
+  }
 
   return (
     <Table>
