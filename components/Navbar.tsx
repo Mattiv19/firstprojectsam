@@ -45,9 +45,11 @@ const Navbar = () => {
                         <button className="text-gray-900 hover:text-gray-600 px-3 py-2 text-sm font-medium">
                             Sign up
                         </button>
-                        <button className="bg-white text-black px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">
-                            Log in
-                        </button>
+                        <Link href="/login">
+                            <button className="bg-white text-black px-4 py-2 rounded-full text-sm font-medium hover:bg-gray-100 transition-colors">
+                                Log in
+                            </button>
+                        </Link>
                     </div>
 
                     {/* Mobile menu button */}
